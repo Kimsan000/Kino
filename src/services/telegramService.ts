@@ -93,7 +93,18 @@ export const telegramService = {
     await this.sendMessage(text);
   },
 
-  // 5. Test xabar yuborish
+  // 5. Biz bilan bog'lanish (Murojaat xabari)
+  async notifyContactMessage(name: string, contact: string, message: string): Promise<boolean> {
+    const text = `📬 <b>KINOMAN: Yangi Murojaat!</b>\n\n` +
+      `👤 <b>Ism:</b> ${name}\n` +
+      `📞 <b>Aloqa / Telegram:</b> ${contact}\n` +
+      `📝 <b>Xabar:</b> <i>"${message}"</i>\n\n` +
+      `⏰ <i>${new Date().toLocaleString('uz-UZ')}</i>`;
+
+    return await this.sendMessage(text);
+  },
+
+  // 6. Test xabar yuborish
   async sendTestNotification(): Promise<{ success: boolean; message: string }> {
     const success = await this.sendMessage(
       `🔔 <b>KINOMAN UZ: Test Xabarnomasi</b>\n\n` +
@@ -106,3 +117,4 @@ export const telegramService = {
     return { success: false, message: 'Xabar yuborishda xatolik yuz berdi. Bot Token yoki Chat ID ni tekshiring.' };
   }
 };
+

@@ -3,22 +3,24 @@ import { Movie, Genre } from './types';
 import { movieService } from './services/movieService';
 import { authService } from './services/authService';
 import { telegramService } from './services/telegramService';
-import { Navbar } from './components/Navbar';
+import { Navbar, NavTab } from './components/Navbar';
 import { HeroBanner } from './components/HeroBanner';
 import { MovieCard } from './components/MovieCard';
 import { MovieDetailModal } from './components/MovieDetailModal';
 import { FavoritesModal } from './components/FavoritesModal';
+import { ContactModal } from './components/ContactModal';
+import { FaqSection } from './components/FaqSection';
 import { AdminLayout } from './admin/AdminLayout';
 import { AdminLoginModal } from './admin/AdminLoginModal';
 import { 
-  Sparkles, Film, Flame, Award, SlidersHorizontal, 
-  Search, Shield, Heart, ArrowUp, Lock 
+  Sparkles, Film, Flame, SlidersHorizontal, 
+  Search, Shield, Bookmark, ArrowUp, Lock, HelpCircle, MessageSquare 
 } from 'lucide-react';
 
 const STORAGE_FAVORITES_KEY = 'kinoman_favorites_ids';
 
 export function App() {
-  const [currentTab, setCurrentTab] = useState<'home' | 'movies' | 'genres' | 'admin'>('home');
+  const [currentTab, setCurrentTab] = useState<NavTab>('home');
   const [movies, setMovies] = useState<Movie[]>([]);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,9 @@ export function App() {
     return authService.isAuthenticated();
   });
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // Contact Modal
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,7 +97,7 @@ export function App() {
   }, [movies, favoriteIds]);
 
   // Handle Tab Switch (Protecting Admin Panel with Auth)
-  const handleTabChange = (tab: 'home' | 'movies' | 'genres' | 'admin') => {
+  const handleTabChange = (tab: NavTab) => {
     if (tab === 'admin') {
       if (isAdminAuthenticated) {
         setCurrentTab('admin');
@@ -182,6 +187,7 @@ export function App() {
         setSearchQuery={setSearchQuery}
         favoritesCount={favoriteIds.length}
         openFavorites={() => setIsFavoritesOpen(true)}
+        openContact={() => setIsContactModalOpen(true)}
         selectedGenre={selectedGenre}
         setSelectedGenre={setSelectedGenre}
         genres={genreNames}
@@ -189,154 +195,163 @@ export function App() {
 
       {/* Main Content */}
       <main className="flex-1 pb-20">
-        {/* Hero Section (only when no active search and on 'home' tab) */}
-        {!searchQuery && selectedGenre === 'all' && currentTab === 'home' && (
-          <HeroBanner
-            movies={featuredMovies.length > 0 ? featuredMovies : movies}
-            onSelectMovie={handleOpenDetails}
-            onPlayTrailer={handleOpenTrailer}
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-          />
-        )}
-
-        {/* Filter and Content Container */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-10">
-          
-          {/* Genre Category Pills */}
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-rose-500" />
-                <h2 className="text-xl sm:text-2xl font-black text-white">
-                  {searchQuery ? `Qidiruv natijalari: "${searchQuery}"` : selectedGenre === 'all' ? 'Kinolar Kolleksiyasi' : `${selectedGenre} Janridagi Filmlar`}
-                </h2>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-slate-400">
-                  {filteredMovies.length} ta film
-                </span>
-              </div>
-
-              {/* Sort Switcher */}
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-slate-400" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'newest' | 'rating' | 'popular')}
-                  className="px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-rose-500"
-                >
-                  <option value="newest" className="bg-[#0e0f12]">Eng yangilari</option>
-                  <option value="rating" className="bg-[#0e0f12]">IMDb Reytingi bo'yicha</option>
-                  <option value="popular" className="bg-[#0e0f12]">Eng ko'p ko'rilgan</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Quick Genre Buttons */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none no-scrollbar">
-              <button
-                onClick={() => setSelectedGenre('all')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  selectedGenre === 'all'
-                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
-                    : 'bg-white/[0.03] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/5'
-                }`}
-              >
-                Barchasi
-              </button>
-
-              {genres.map((g) => (
-                <button
-                  key={g.id}
-                  onClick={() => setSelectedGenre(g.name)}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                    selectedGenre === g.name
-                      ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
-                      : 'bg-white/[0.03] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/5'
-                  }`}
-                >
-                  {g.name}
-                </button>
-              ))}
-            </div>
+        {/* If FAQ Tab */}
+        {currentTab === 'faq' ? (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+            <FaqSection onOpenContact={() => setIsContactModalOpen(true)} />
           </div>
-
-          {/* Popular Films Row (When on home & not searching) */}
-          {!searchQuery && selectedGenre === 'all' && currentTab === 'home' && popularMovies.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Flame className="w-5 h-5 text-amber-500" />
-                  <h3 className="text-lg sm:text-xl font-bold text-white">Eng Ommabop Kinolar</h3>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {popularMovies.slice(0, 5).map((movie) => (
-                  <MovieCard
-                    key={`popular-${movie.id}`}
-                    movie={movie}
-                    onSelect={handleOpenDetails}
-                    onPlay={handleOpenTrailer}
-                    isFavorite={isFavorite(movie.id)}
-                    onToggleFavorite={toggleFavorite}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Main Movie Grid */}
-          <div className="space-y-4">
+        ) : (
+          <>
+            {/* Hero Section (only when on 'home' tab and not searching) */}
             {!searchQuery && selectedGenre === 'all' && currentTab === 'home' && (
-              <div className="flex items-center gap-2">
-                <Film className="w-5 h-5 text-rose-500" />
-                <h3 className="text-lg sm:text-xl font-bold text-white">Barcha Filmlar</h3>
-              </div>
+              <HeroBanner
+                movies={featuredMovies.length > 0 ? featuredMovies : movies}
+                onSelectMovie={handleOpenDetails}
+                onPlayTrailer={handleOpenTrailer}
+                isFavorite={isFavorite}
+                onToggleFavorite={toggleFavorite}
+              />
             )}
 
-            {loading ? (
-              <div className="py-24 text-center space-y-3">
-                <div className="w-10 h-10 border-4 border-rose-600 border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-xs text-slate-400">Filmlar yuklanmoqda...</p>
-              </div>
-            ) : filteredMovies.length === 0 ? (
-              <div className="py-20 text-center space-y-4 bg-white/[0.01] rounded-3xl border border-white/5">
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto text-slate-500">
-                  <Search className="w-8 h-8" />
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-white">Hech qanday film topilmadi</h4>
-                  <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-                    Qidiruv so'zini o'zgartirib ko'ring yoki boshqa janrni tanlang.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedGenre('all');
-                  }}
-                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-rose-400"
-                >
-                  Filtrlarni tozalash
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                {filteredMovies.map((movie) => (
-                  <MovieCard
-                    key={movie.id}
-                    movie={movie}
-                    onSelect={handleOpenDetails}
-                    onPlay={handleOpenTrailer}
-                    isFavorite={isFavorite(movie.id)}
-                    onToggleFavorite={toggleFavorite}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+            {/* Filter and Content Container */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-10">
+              
+              {/* Genre Category Pills */}
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-rose-500" />
+                    <h2 className="text-xl sm:text-2xl font-black text-white">
+                      {searchQuery ? `Qidiruv natijalari: "${searchQuery}"` : selectedGenre === 'all' ? 'Kinolar Kolleksiyasi' : `${selectedGenre} Janridagi Filmlar`}
+                    </h2>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-slate-400">
+                      {filteredMovies.length} ta film
+                    </span>
+                  </div>
 
-        </div>
+                  {/* Sort Switcher */}
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-slate-400" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'newest' | 'rating' | 'popular')}
+                      className="px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-rose-500"
+                    >
+                      <option value="newest" className="bg-[#0e0f12]">Eng yangilari</option>
+                      <option value="rating" className="bg-[#0e0f12]">IMDb Reytingi bo'yicha</option>
+                      <option value="popular" className="bg-[#0e0f12]">Eng ko'p ko'rilgan</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Quick Genre Buttons */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none no-scrollbar">
+                  <button
+                    onClick={() => setSelectedGenre('all')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                      selectedGenre === 'all'
+                        ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
+                        : 'bg-white/[0.03] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/5'
+                    }`}
+                  >
+                    Barchasi
+                  </button>
+
+                  {genres.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => setSelectedGenre(g.name)}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                        selectedGenre === g.name
+                          ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
+                          : 'bg-white/[0.03] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/5'
+                      }`}
+                    >
+                      {g.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Popular Films Row (When on home & not searching) */}
+              {!searchQuery && selectedGenre === 'all' && currentTab === 'home' && popularMovies.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Flame className="w-5 h-5 text-amber-500" />
+                      <h3 className="text-lg sm:text-xl font-bold text-white">Eng Ommabop Kinolar</h3>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {popularMovies.slice(0, 5).map((movie) => (
+                      <MovieCard
+                        key={`popular-${movie.id}`}
+                        movie={movie}
+                        onSelect={handleOpenDetails}
+                        onPlay={handleOpenTrailer}
+                        isFavorite={isFavorite(movie.id)}
+                        onToggleFavorite={toggleFavorite}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Main Movie Grid */}
+              <div className="space-y-4">
+                {!searchQuery && selectedGenre === 'all' && currentTab === 'home' && (
+                  <div className="flex items-center gap-2">
+                    <Film className="w-5 h-5 text-rose-500" />
+                    <h3 className="text-lg sm:text-xl font-bold text-white">Barcha Filmlar</h3>
+                  </div>
+                )}
+
+                {loading ? (
+                  <div className="py-24 text-center space-y-3">
+                    <div className="w-10 h-10 border-4 border-rose-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-xs text-slate-400">Filmlar yuklanmoqda...</p>
+                  </div>
+                ) : filteredMovies.length === 0 ? (
+                  <div className="py-20 text-center space-y-4 bg-white/[0.01] rounded-3xl border border-white/5">
+                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto text-slate-500">
+                      <Search className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-white">Hech qanday film topilmadi</h4>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                        Qidiruv so'zini o'zgartirib ko'ring yoki boshqa janrni tanlang.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedGenre('all');
+                      }}
+                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-rose-400"
+                    >
+                      Filtrlarni tozalash
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                    {filteredMovies.map((movie) => (
+                      <MovieCard
+                        key={movie.id}
+                        movie={movie}
+                        onSelect={handleOpenDetails}
+                        onPlay={handleOpenTrailer}
+                        isFavorite={isFavorite(movie.id)}
+                        onToggleFavorite={toggleFavorite}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </>
+        )}
       </main>
 
       {/* Footer */}
@@ -354,21 +369,42 @@ export function App() {
             </div>
           </div>
 
-          <div className="text-xs text-slate-400 text-center md:text-right space-y-2">
-            <p>© {new Date().getFullYear()} KINOMAN. Barcha huquqlar himoyalangan.</p>
-            <div className="flex items-center justify-center md:justify-end gap-4 text-slate-500">
-              <button
-                onClick={() => handleTabChange('admin')}
-                className="hover:text-amber-400 transition-colors flex items-center gap-1 font-semibold"
-              >
-                <Lock className="w-3.5 h-3.5 text-amber-400" />
-                Admin Boshqaruv Tizimi
-              </button>
-              <span>•</span>
-              <a href="#root" className="hover:text-white transition-colors flex items-center gap-1">
-                <ArrowUp className="w-3.5 h-3.5" /> Yuqoriga
-              </a>
-            </div>
+          {/* Quick Navigation Links */}
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium text-slate-400">
+            <button onClick={() => setCurrentTab('home')} className="hover:text-white transition-colors">
+              Bosh sahifa
+            </button>
+            <span>•</span>
+            <button onClick={() => setCurrentTab('movies')} className="hover:text-white transition-colors">
+              Filmlar
+            </button>
+            <span>•</span>
+            <button onClick={() => setIsFavoritesOpen(true)} className="hover:text-amber-400 transition-colors flex items-center gap-1">
+              <Bookmark className="w-3.5 h-3.5 text-amber-400" />
+              Sevimlilar ({favoriteIds.length})
+            </button>
+            <span>•</span>
+            <button onClick={() => setIsContactModalOpen(true)} className="hover:text-rose-400 transition-colors flex items-center gap-1">
+              <MessageSquare className="w-3.5 h-3.5 text-rose-400" />
+              Biz bilan bog'lanish
+            </button>
+            <span>•</span>
+            <button onClick={() => setCurrentTab('faq')} className="hover:text-white transition-colors flex items-center gap-1">
+              <HelpCircle className="w-3.5 h-3.5" />
+              FAQ
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => handleTabChange('admin')}
+              className="text-amber-400 hover:text-amber-300 font-bold transition-colors flex items-center gap-1"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Admin Panel
+            </button>
+          </div>
+
+          <div className="text-xs text-slate-500 text-center md:text-right">
+            <p>© {new Date().getFullYear()} KINOMAN UZ. Barcha huquqlar himoyalangan.</p>
           </div>
         </div>
       </footer>
@@ -378,6 +414,12 @@ export function App() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onSuccess={handleLoginSuccess}
+      />
+
+      {/* Contact Us Modal */}
+      <ContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
       />
 
       {/* Movie Detail Modal (With Video Trailer Player & Reviews) */}
