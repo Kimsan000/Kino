@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Database, Check, Copy, RefreshCw, UploadCloud, 
-  ExternalLink, ShieldCheck, AlertCircle, Sparkles, Terminal 
+  ExternalLink, ShieldCheck, AlertCircle, Sparkles, Terminal,
+  Send, Bell
 } from 'lucide-react';
 import { 
   getSupabaseCredentials, 
@@ -9,6 +10,7 @@ import {
   checkSupabaseConnection 
 } from '../supabase/client';
 import { movieService } from '../services/movieService';
+import { telegramService } from '../services/telegramService';
 
 interface AdminSupabaseConfigProps {
   onRefreshMovies: () => void;
@@ -25,16 +27,44 @@ export const AdminSupabaseConfig: React.FC<AdminSupabaseConfigProps> = ({
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
   const [copiedSql, setCopiedSql] = useState(false);
 
+  // Telegram Bot State
+  const [tgBotToken, setTgBotToken] = useState('');
+  const [tgChatId, setTgChatId] = useState('');
+  const [tgEnabled, setTgEnabled] = useState(true);
+  const [testingTg, setTestingTg] = useState(false);
+  const [tgResult, setTgResult] = useState<{ success: boolean; message: string } | null>(null);
+
   useEffect(() => {
     const creds = getSupabaseCredentials();
     setUrl(creds.url);
     setAnonKey(creds.anonKey);
+
+    const tg = telegramService.getConfig();
+    setTgBotToken(tg.botToken);
+    setTgChatId(tg.chatId);
+    setTgEnabled(tg.enabled);
 
     // Initial check
     if (creds.url && creds.anonKey) {
       checkSupabaseConnection().then(setTestResult);
     }
   }, []);
+
+  const handleSaveTg = (e: React.FormEvent) => {
+    e.preventDefault();
+    telegramService.saveConfig(tgBotToken, tgChatId, tgEnabled);
+    setTgResult({ success: true, message: 'Telegram bot sozlamalari muvaffaqiyatli saqlandi!' });
+    setTimeout(() => setTgResult(null), 3500);
+  };
+
+  const handleSendTgTest = async () => {
+    setTestingTg(true);
+    setTgResult(null);
+    telegramService.saveConfig(tgBotToken, tgChatId, tgEnabled);
+    const res = await telegramService.sendTestNotification();
+    setTgResult(res);
+    setTestingTg(false);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -255,6 +285,105 @@ CREATE POLICY "Sharhlarni qo'shish" ON public.reviews FOR INSERT WITH CHECK (tru
             >
               <UploadCloud className={`w-4 h-4 ${syncing ? 'animate-bounce' : ''}`} />
               {syncing ? 'Yuklanmoqda...' : 'Kinolarni Supabase-ga sinxronlash'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Telegram Bot Notification Card */}
+      <div className="p-6 rounded-2xl bg-[#0f1117] border border-blue-500/20 space-y-5">
+        <div className="flex items-center justify-between pb-4 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/10">
+              <Send className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-white text-base">Telegram Bot Bildirishnomalari</h3>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Ulangan (@movie6776bot)
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Saytdagi yangi sharhlar, kino qo'shish va admin kirishlari to'g'ridan-to'g'ri Telegramingizga yuboriladi.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveTg} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Telegram Bot Token (BotFather)
+              </label>
+              <input
+                type="password"
+                value={tgBotToken}
+                onChange={(e) => setTgBotToken(e.target.value)}
+                placeholder="8928954244:AAGwjR..."
+                className="w-full px-3.5 py-2.5 bg-black/50 border border-white/10 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Admin Chat ID (Sizning Telegram ID)
+              </label>
+              <input
+                type="text"
+                value={tgChatId}
+                onChange={(e) => setTgChatId(e.target.value)}
+                placeholder="7266374035"
+                className="w-full px-3.5 py-2.5 bg-black/50 border border-white/10 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] cursor-pointer transition-colors max-w-xs">
+            <input
+              type="checkbox"
+              checked={tgEnabled}
+              onChange={(e) => setTgEnabled(e.target.checked)}
+              className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-xs font-bold text-white">Telegram bildirishnomalarini yoqish</span>
+          </label>
+
+          {tgResult && (
+            <div
+              className={`p-3.5 rounded-xl border flex items-center gap-3 text-xs ${
+                tgResult.success
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+              }`}
+            >
+              {tgResult.success ? (
+                <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+              )}
+              <span>{tgResult.message}</span>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 active:scale-95 transition-all flex items-center gap-2"
+            >
+              <Check className="w-4 h-4" />
+              Sozlamalarni Saqlash
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSendTgTest}
+              disabled={testingTg}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 disabled:opacity-40 transition-colors flex items-center gap-2"
+            >
+              <Bell className={`w-3.5 h-3.5 text-amber-400 ${testingTg ? 'animate-bounce' : ''}`} />
+              {testingTg ? 'Yuborilmoqda...' : 'Telegramga Test Xabar Yuborish'}
             </button>
           </div>
         </form>

@@ -8,6 +8,7 @@ import { AdminGenres } from './AdminGenres';
 import { AdminSupabaseConfig } from './AdminSupabaseConfig';
 import { movieService } from '../services/movieService';
 import { authService } from '../services/authService';
+import { telegramService } from '../services/telegramService';
 import { checkSupabaseConnection } from '../supabase/client';
 import { Menu, X, ArrowLeft, CheckCircle2, AlertCircle, KeyRound, LogOut } from 'lucide-react';
 
@@ -84,6 +85,13 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       } else {
         await movieService.addMovie(movieData);
         showToast('Yangi film muvaffaqiyatli qo\'shildi!');
+        // Telegram bildirishnomasi
+        telegramService.notifyNewMovie(
+          movieData.title,
+          movieData.release_year,
+          movieData.rating,
+          movieData.genres
+        );
       }
       setEditingMovie(null);
       await loadData();
@@ -95,8 +103,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   const handleDeleteMovie = async (id: string) => {
     try {
+      const target = movies.find((m) => m.id === id);
       await movieService.deleteMovie(id);
       showToast('Film muvaffaqiyatli o\'chirildi!');
+      if (target) {
+        telegramService.notifyMovieDeleted(target.title);
+      }
       await loadData();
     } catch (err) {
       showToast('Filmni o\'chirishda xatolik!', 'error');

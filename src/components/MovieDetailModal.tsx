@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Movie, Review } from '../types';
 import { movieService } from '../services/movieService';
+import { telegramService } from '../services/telegramService';
 import { 
   X, Star, Play, Bookmark, Clock, Calendar, Globe, User, 
   MessageSquare, Send, CheckCircle2, Film
@@ -52,6 +53,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
         comment: commentText.trim(),
       });
       setReviews([created, ...reviews]);
+      // Telegram bildirishnomasi
+      telegramService.notifyNewReview(movie.title, authorName.trim(), reviewRating, commentText.trim());
       setAuthorName('');
       setCommentText('');
       setSuccessMsg('Fikringiz muvaffaqiyatli saqlandi!');

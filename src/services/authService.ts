@@ -60,3 +60,4 @@ export const authService = {
     return { success: true, message: 'Login va parol muvaffaqiyatli yangilandi!' };
   }
 };
+

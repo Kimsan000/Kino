@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Movie, Genre } from './types';
 import { movieService } from './services/movieService';
 import { authService } from './services/authService';
+import { telegramService } from './services/telegramService';
 import { Navbar } from './components/Navbar';
 import { HeroBanner } from './components/HeroBanner';
 import { MovieCard } from './components/MovieCard';
@@ -107,6 +108,7 @@ export function App() {
     setIsAdminAuthenticated(true);
     setIsLoginModalOpen(false);
     setCurrentTab('admin');
+    telegramService.notifyAdminLogin(authService.getCredentials().username);
   };
 
   const handleLogout = () => {
