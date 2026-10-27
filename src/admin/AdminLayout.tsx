@@ -7,16 +7,19 @@ import { AdminMovieForm } from './AdminMovieForm';
 import { AdminGenres } from './AdminGenres';
 import { AdminSupabaseConfig } from './AdminSupabaseConfig';
 import { movieService } from '../services/movieService';
+import { authService } from '../services/authService';
 import { checkSupabaseConnection } from '../supabase/client';
-import { Menu, X, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Menu, X, ArrowLeft, CheckCircle2, AlertCircle, KeyRound, LogOut } from 'lucide-react';
 
 interface AdminLayoutProps {
   onExitAdmin: () => void;
+  onLogout: () => void;
   onPreviewMovie: (movie: Movie) => void;
 }
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({
   onExitAdmin,
+  onLogout,
   onPreviewMovie,
 }) => {
   // Always start at 'dashboard' as requested by user!
@@ -28,6 +31,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   const [supabaseConnected, setSupabaseConnected] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Password change modal state
+  const [showPassModal, setShowPassModal] = useState(false);
+  const [currentPass, setCurrentPass] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [newPass, setNewPass] = useState('');
+
+  const adminUsername = authService.getCredentials().username;
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -120,6 +131,20 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     }
   };
 
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = authService.changeCredentials(currentPass, newUsername, newPass);
+    if (res.success) {
+      showToast(res.message);
+      setShowPassModal(false);
+      setCurrentPass('');
+      setNewUsername('');
+      setNewPass('');
+    } else {
+      showToast(res.message, 'error');
+    }
+  };
+
   const genreNames = genres.map((g) => g.name);
 
   return (
@@ -148,13 +173,22 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           <span className="font-black text-white text-base">ADMIN PANEL</span>
         </div>
 
-        <button
-          onClick={onExitAdmin}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 text-xs text-slate-300"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Sayt
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPassModal(true)}
+            className="p-2 rounded-xl bg-white/5 text-xs text-slate-300"
+            title="Parolni o'zgartirish"
+          >
+            <KeyRound className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onLogout}
+            className="p-2 rounded-xl bg-rose-500/20 text-xs text-rose-400"
+            title="Chiqish"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Sidebar for Desktop */}
@@ -163,10 +197,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onExitAdmin={onExitAdmin}
+          onLogout={onLogout}
           moviesCount={movies.length}
           genresCount={genres.length}
           onResetData={handleResetSampleData}
           supabaseConnected={supabaseConnected}
+          adminUsername={adminUsername}
         />
       </div>
 
@@ -181,10 +217,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 setMobileSidebarOpen(false);
               }}
               onExitAdmin={onExitAdmin}
+              onLogout={onLogout}
               moviesCount={movies.length}
               genresCount={genres.length}
               onResetData={handleResetSampleData}
               supabaseConnected={supabaseConnected}
+              adminUsername={adminUsername}
             />
           </div>
           <div className="flex-1" onClick={() => setMobileSidebarOpen(false)} />
@@ -193,6 +231,17 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
       {/* Main Admin Content Area */}
       <main className="flex-1 p-4 sm:p-8 lg:p-10 overflow-y-auto max-h-screen">
+        {/* Top bar with Password change option */}
+        <div className="hidden md:flex items-center justify-end gap-3 mb-6">
+          <button
+            onClick={() => setShowPassModal(true)}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 transition-colors border border-white/5"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+            Parol va Logini o'zgartirish
+          </button>
+        </div>
+
         {/* Render Tab Content */}
         {activeTab === 'dashboard' && stats && (
           <AdminDashboard
@@ -240,7 +289,79 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           <AdminSupabaseConfig onRefreshMovies={loadData} />
         )}
       </main>
+
+      {/* Password Change Modal */}
+      {showPassModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-[#0f1117] border border-white/10 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-white text-base">Admin Login va Parolni o'zgartirish</h3>
+              </div>
+              <button
+                onClick={() => setShowPassModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Hozirgi Parol *</label>
+                <input
+                  type="password"
+                  required
+                  value={currentPass}
+                  onChange={(e) => setCurrentPass(e.target.value)}
+                  placeholder="Hozirgi parolingiz..."
+                  className="w-full px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Yangi Admin Login (Ixtiyoriy)</label>
+                <input
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  placeholder="Yangi login (bo'sh qolsa eskisi saqlanadi)..."
+                  className="w-full px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Yangi Maxfiy Parol *</label>
+                <input
+                  type="password"
+                  required
+                  value={newPass}
+                  onChange={(e) => setNewPass(e.target.value)}
+                  placeholder="Kamida 6 ta belgi..."
+                  className="w-full px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPassModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/20 transition-all"
+                >
+                  Saqlash
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-

@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Movie, Genre } from './types';
 import { movieService } from './services/movieService';
+import { authService } from './services/authService';
 import { Navbar } from './components/Navbar';
 import { HeroBanner } from './components/HeroBanner';
 import { MovieCard } from './components/MovieCard';
 import { MovieDetailModal } from './components/MovieDetailModal';
 import { FavoritesModal } from './components/FavoritesModal';
 import { AdminLayout } from './admin/AdminLayout';
+import { AdminLoginModal } from './admin/AdminLoginModal';
 import { 
   Sparkles, Film, Flame, Award, SlidersHorizontal, 
-  Search, Shield, Heart, ArrowUp 
+  Search, Shield, Heart, ArrowUp, Lock 
 } from 'lucide-react';
 
 const STORAGE_FAVORITES_KEY = 'kinoman_favorites_ids';
@@ -19,6 +21,12 @@ export function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Admin Auth Gate
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
+    return authService.isAuthenticated();
+  });
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,6 +90,31 @@ export function App() {
     return movies.filter((m) => favoriteIds.includes(m.id));
   }, [movies, favoriteIds]);
 
+  // Handle Tab Switch (Protecting Admin Panel with Auth)
+  const handleTabChange = (tab: 'home' | 'movies' | 'genres' | 'admin') => {
+    if (tab === 'admin') {
+      if (isAdminAuthenticated) {
+        setCurrentTab('admin');
+      } else {
+        setIsLoginModalOpen(true);
+      }
+    } else {
+      setCurrentTab(tab);
+    }
+  };
+
+  const handleLoginSuccess = () => {
+    setIsAdminAuthenticated(true);
+    setIsLoginModalOpen(false);
+    setCurrentTab('admin');
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setIsAdminAuthenticated(false);
+    setCurrentTab('home');
+  };
+
   // Filtered and Sorted Movies
   const filteredMovies = useMemo(() => {
     return movies
@@ -123,14 +156,15 @@ export function App() {
 
   const genreNames = genres.map((g) => g.name);
 
-  // If in admin mode, show the full admin dashboard
-  if (currentTab === 'admin') {
+  // If in admin mode and authenticated, show the full admin dashboard
+  if (currentTab === 'admin' && isAdminAuthenticated) {
     return (
       <AdminLayout
         onExitAdmin={() => {
           setCurrentTab('home');
           loadData();
         }}
+        onLogout={handleLogout}
         onPreviewMovie={handleOpenDetails}
       />
     );
@@ -141,7 +175,7 @@ export function App() {
       {/* Navbar */}
       <Navbar
         currentTab={currentTab}
-        setCurrentTab={setCurrentTab}
+        setCurrentTab={handleTabChange}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         favoritesCount={favoriteIds.length}
@@ -322,10 +356,10 @@ export function App() {
             <p>© {new Date().getFullYear()} KINOMAN. Barcha huquqlar himoyalangan.</p>
             <div className="flex items-center justify-center md:justify-end gap-4 text-slate-500">
               <button
-                onClick={() => setCurrentTab('admin')}
+                onClick={() => handleTabChange('admin')}
                 className="hover:text-amber-400 transition-colors flex items-center gap-1 font-semibold"
               >
-                <Shield className="w-3.5 h-3.5" />
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
                 Admin Boshqaruv Tizimi
               </button>
               <span>•</span>
@@ -336,6 +370,13 @@ export function App() {
           </div>
         </div>
       </footer>
+
+      {/* Admin Login Protection Modal */}
+      <AdminLoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSuccess={handleLoginSuccess}
+      />
 
       {/* Movie Detail Modal (With Video Trailer Player & Reviews) */}
       <MovieDetailModal
@@ -362,4 +403,3 @@ export function App() {
 }
 
 export default App;
-

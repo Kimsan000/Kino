@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   LayoutDashboard, Film, PlusCircle, FolderTree, 
-  Database, ArrowLeft, RefreshCw, Sparkles, Shield
+  Database, ArrowLeft, RefreshCw, LogOut, Shield, KeyRound
 } from 'lucide-react';
 
 export type AdminTab = 'dashboard' | 'movies' | 'add-movie' | 'genres' | 'supabase';
@@ -10,20 +10,24 @@ interface AdminSidebarProps {
   activeTab: AdminTab;
   setActiveTab: (tab: AdminTab) => void;
   onExitAdmin: () => void;
+  onLogout: () => void;
   moviesCount: number;
   genresCount: number;
   onResetData: () => void;
   supabaseConnected: boolean;
+  adminUsername: string;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   activeTab,
   setActiveTab,
   onExitAdmin,
+  onLogout,
   moviesCount,
   genresCount,
   onResetData,
   supabaseConnected,
+  adminUsername,
 }) => {
   const navItems = [
     {
@@ -79,7 +83,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 ADMIN
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Boshqaruv Tizimi</p>
+            <p className="text-[11px] text-slate-400">Foydalanuvchi: <span className="text-white font-semibold">{adminUsername}</span></p>
           </div>
         </div>
       </div>
@@ -133,7 +137,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${supabaseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
-            <span className="text-slate-400 font-medium">Baza holati:</span>
+            <span className="text-slate-400 font-medium">Baza:</span>
           </div>
           <span className={`font-bold ${supabaseConnected ? 'text-emerald-400' : 'text-amber-400'}`}>
             {supabaseConnected ? 'Supabase SQL' : 'Mahalliy (Local)'}
@@ -153,13 +157,21 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {/* Exit Admin Button */}
         <button
           onClick={onExitAdmin}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-sm font-semibold transition-all border border-white/10 hover:border-white/20"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-semibold transition-all border border-white/10 hover:border-white/20"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-3.5 h-3.5" />
           Saytga qaytish
+        </button>
+
+        {/* Logout Admin Button */}
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl text-xs font-bold transition-all border border-rose-500/20 hover:border-rose-500/30"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Chiqish (Logout)
         </button>
       </div>
     </aside>
   );
 };
-
